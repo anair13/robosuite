@@ -20,12 +20,12 @@ import time
 import threading
 from collections import namedtuple
 import numpy as np
-try:
-    import hid
-except ModuleNotFoundError as exc:
-    raise ImportError("Unable to load module hid, required to interface with SpaceMouse. "
-                      "Only Mac OS X is officially supported. Install the additional "
-                      "requirements with `pip install -r requirements-ik.txt`") from exc
+# try:
+import hid
+# except ModuleNotFoundError as exc:
+#     raise ImportError("Unable to load module hid, required to interface with SpaceMouse. "
+#                       "Only Mac OS X is officially supported. Install the additional "
+#                       "requirements with `pip install -r requirements-ik.txt`") from exc
 
 from robosuite.utils.transform_utils import rotation_matrix
 from robosuite.devices import Device
@@ -65,7 +65,7 @@ def convert(b1, b2):
 class SpaceMouse(Device):
     """A minimalistic driver class for SpaceMouse with HID library."""
 
-    def __init__(self, vendor_id=9583, product_id=50735):
+    def __init__(self, vendor_id=9583, product_id=50741):
         """Initialize a SpaceMouse handler.
 
         Args:
@@ -80,12 +80,20 @@ class SpaceMouse(Device):
 
         print("Opening SpaceMouse device")
         self.device = hid.device()
+        # for x in hid.enumerate():
+        #     print()
+        #     for key in sorted(x.keys()):
+        #         print(key, x[key])
         self.device.open(vendor_id, product_id)  # SpaceMouse
+        # self.device.open(1133, 50732)
+        # self.device.open(1452, 627)
 
         print("Manufacturer: %s" % self.device.get_manufacturer_string())
         print("Product: %s" % self.device.get_product_string())
 
         self._display_controls()
+
+        # pause = input()
 
         self.single_click_and_hold = False
 
@@ -98,6 +106,11 @@ class SpaceMouse(Device):
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
         self.thread.start()
+
+        self.start_control()
+
+    def _device_info(self):
+        pass
 
     def _display_controls(self):
         """
@@ -158,17 +171,34 @@ class SpaceMouse(Device):
         t_last_click = -1
 
         while True:
-            d = self.device.read(13)
+            d = self.device.read(14)
             if d is not None and self._enabled:
-
                 if d[0] == 1:  ## readings from 6-DoF sensor
                     self.y = convert(d[1], d[2])
                     self.x = convert(d[3], d[4])
                     self.z = convert(d[5], d[6]) * -1.0
 
-                    self.roll = convert(d[7], d[8])
-                    self.pitch = convert(d[9], d[10])
-                    self.yaw = convert(d[11], d[12])
+                    # self.roll = convert(d[7], d[8])
+                    # self.pitch = convert(d[9], d[10])
+                    # self.yaw = convert(d[11], d[12])
+
+                    # self._control = [
+                    #     self.x,
+                    #     self.y,
+                    #     self.z,
+                    #     self.roll,
+                    #     self.pitch,
+                    #     self.yaw,
+                    # ]
+
+                elif d[0] == 2: ## readings from 6-DoF sensor
+                    # self.y = convert(d[1], d[2])
+                    # self.x = convert(d[3], d[4])
+                    # self.z = convert(d[5], d[6]) * -1.0
+
+                    self.roll = convert(d[1], d[2])
+                    self.pitch = convert(d[3], d[4])
+                    self.yaw = convert(d[5], d[6])
 
                     self._control = [
                         self.x,
@@ -214,6 +244,6 @@ class SpaceMouse(Device):
 if __name__ == "__main__":
 
     space_mouse = SpaceMouse()
-    for i in range(100):
+    for i in range(1000):
         print(space_mouse.control, space_mouse.control_gripper)
         time.sleep(0.02)
